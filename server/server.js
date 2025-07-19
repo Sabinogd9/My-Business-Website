@@ -9,7 +9,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.static('public'));
+
+// ✅ Serve static files from project root
+app.use(express.static(path.join(__dirname, '..')));
 app.use(bodyParser.json());
 
 // ✅ Email transporter using environment variables
@@ -25,7 +27,6 @@ const transporter = nodemailer.createTransport({
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🛡️ Honeypot check for spam
   if (company && company.trim() !== '') {
     console.log('🛑 Spam blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -40,7 +41,6 @@ app.post('/api/contact', (req, res) => {
 
   console.log('📩 New contact:', newContact);
 
-  // ✅ Correct path to contacts.json inside data/ folder
   const filePath = path.join(__dirname, '../data/contacts.json');
 
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -76,7 +76,7 @@ Date: ${newContact.date}
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error('❌ Email sending failed:', error);
-          return res.status(500).json({ message: 'Email failed' });
+          return res.status(500).json({ message: 'Email failed', error: error.toString() });
         } else {
           console.log('✅ Email sent:', info.response);
           return res.status(200).json({ message: 'Contact saved and email sent!' });
@@ -97,6 +97,11 @@ app.get('/api/contacts', (req, res) => {
     const contacts = JSON.parse(data || '[]');
     res.json(contacts);
   });
+});
+
+// 🏠 Route to serve index.html on root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
 });
 
 app.listen(PORT, () => {
