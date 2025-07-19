@@ -21,9 +21,11 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// 📩 Handle contact form submission
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
+  // 🛡️ Honeypot check for spam
   if (company && company.trim() !== '') {
     console.log('🛑 Spam blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -38,7 +40,8 @@ app.post('/api/contact', (req, res) => {
 
   console.log('📩 New contact:', newContact);
 
-  const filePath = path.join(__dirname, 'data', 'contacts.json');
+  // ✅ Correct path to contacts.json inside data/ folder
+  const filePath = path.join(__dirname, '../data/contacts.json');
 
   fs.readFile(filePath, 'utf8', (err, data) => {
     let contacts = [];
@@ -83,9 +86,9 @@ Date: ${newContact.date}
   });
 });
 
-// GET all contacts
+// 🗂️ GET all contacts
 app.get('/api/contacts', (req, res) => {
-  const filePath = path.join(__dirname, 'data', 'contacts.json');
+  const filePath = path.join(__dirname, '../data/contacts.json');
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
       console.error('❌ Failed to read contacts:', err);
