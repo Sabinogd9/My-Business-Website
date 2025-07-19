@@ -2,33 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✅ CORS enabled
+const cors = require('cors');
 const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // ✅ Allow cross-origin requests (e.g., from GitHub Pages)
+app.use(cors());
 app.use(express.static('public'));
 app.use(bodyParser.json());
 
-// ✅ Email transporter config (keep credentials safe in .env in real apps)
+// ✅ Email transporter using environment variables
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'sabinogd8@gmail.com',
-    pass: 'kvsr svjf hfou vtis' // ✅ App password (never share publicly)
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
-// ✅ Contact form handler
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🛡️ Honeypot check
   if (company && company.trim() !== '') {
-    console.log('🛑 Spam blocked by honeypot.');
-    return res.status(200).json({ message: 'Thank you!' }); // Silently ignore spam
+    console.log('🛑 Spam blocked.');
+    return res.status(200).json({ message: 'Thank you!' });
   }
 
   const newContact = {
@@ -38,14 +36,20 @@ app.post('/api/contact', (req, res) => {
     date: new Date().toISOString()
   };
 
-  console.log('✅ Received contact:', newContact);
+  console.log('📩 New contact:', newContact);
 
-  // ✅ Make sure contacts.json is in the correct folder (adjust if needed)
-  const filePath = path.join(__dirname, '../contacts.json');
+  const filePath = path.join(__dirname, 'data', 'contacts.json');
 
-  // Save contact to JSON file
   fs.readFile(filePath, 'utf8', (err, data) => {
-    const contacts = data ? JSON.parse(data) : [];
+    let contacts = [];
+    if (data) {
+      try {
+        contacts = JSON.parse(data);
+      } catch (parseErr) {
+        console.error('⚠️ Failed to parse contacts:', parseErr);
+      }
+    }
+
     contacts.push(newContact);
 
     fs.writeFile(filePath, JSON.stringify(contacts, null, 2), err => {
@@ -54,14 +58,11 @@ app.post('/api/contact', (req, res) => {
         return res.status(500).json({ message: 'Error saving data' });
       }
 
-      // ✅ Send email notification
       const mailOptions = {
-        from: 'sabinogd8@gmail.com',
-        to: 'sabinogd8@gmail.com',
+        from: process.env.EMAIL_USER,
+        to: process.env.EMAIL_USER,
         subject: 'New Contact Form Submission',
         text: `
-New contact submission:
-
 Name: ${newContact.name}
 Email: ${newContact.email}
 Message: ${newContact.message}
@@ -71,8 +72,8 @@ Date: ${newContact.date}
 
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
-          console.error('❌ Email failed:', error);
-          return res.status(500).json({ message: 'Email sending failed' });
+          console.error('❌ Email sending failed:', error);
+          return res.status(500).json({ message: 'Email failed' });
         } else {
           console.log('✅ Email sent:', info.response);
           return res.status(200).json({ message: 'Contact saved and email sent!' });
@@ -82,12 +83,12 @@ Date: ${newContact.date}
   });
 });
 
-// ✅ View all contacts
+// GET all contacts
 app.get('/api/contacts', (req, res) => {
-  const filePath = path.join(__dirname, '../contacts.json');
+  const filePath = path.join(__dirname, 'data', 'contacts.json');
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
-      console.error('Failed to read contacts:', err);
+      console.error('❌ Failed to read contacts:', err);
       return res.status(500).json({ message: 'Error reading contacts' });
     }
     const contacts = JSON.parse(data || '[]');
@@ -95,7 +96,6 @@ app.get('/api/contacts', (req, res) => {
   });
 });
 
-// ✅ Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
