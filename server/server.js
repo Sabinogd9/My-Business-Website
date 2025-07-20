@@ -8,19 +8,25 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS: Allow only your domain(s)
+// ✅ CORS: Allow only specific origins with full preflight handling
+const allowedOrigins = ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'];
+
 app.use(cors({
-  origin: ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow server-side or curl requests
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type'],
+  credentials: true
 }));
 
-// ✅ Handle CORS preflight manually
-app.options('/api/contact', cors());
-
-// ✅ Serve static files (HTML/CSS/JS)
-app.use(express.static(path.join(__dirname, '..')));
+// ✅ Body parser
 app.use(bodyParser.json());
+
+// ✅ Serve static files
+app.use(express.static(path.join(__dirname, '..')));
 
 // ✅ Email transporter
 const transporter = nodemailer.createTransport({
@@ -34,11 +40,10 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 📩 POST /api/contact - handle form submission
+// 📩 POST /api/contact
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // Honeypot anti-spam check
   if (company && company.trim() !== '') {
     console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -102,7 +107,7 @@ Date: ${newContact.date}
   });
 });
 
-// 🗂️ GET /api/contacts - retrieve all contacts
+// 🗂️ GET /api/contacts
 app.get('/api/contacts', (req, res) => {
   const filePath = path.join(__dirname, '../data/contacts.json');
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -115,7 +120,7 @@ app.get('/api/contacts', (req, res) => {
   });
 });
 
-// 🧪 GET /test-email - verify email works
+// 🧪 GET /test-email
 app.get('/test-email', (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -134,12 +139,12 @@ app.get('/test-email', (req, res) => {
   });
 });
 
-// 🏠 Serve index.html at root
+// 🏠 Serve index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 
-// 🚀 Start server — ✅ MUST bind to 0.0.0.0 for Render
+// 🚀 Start server — bind to 0.0.0.0 for Render
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
 });
