@@ -38,10 +38,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const res = await fetch('https://my-business-website-1.onrender.com/api/contact', {
+      const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message, company }), // include company
+        body: JSON.stringify({ name, email, message, company }) // include company
       });
 
       const result = await res.json();
