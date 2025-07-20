@@ -26,6 +26,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ Also apply cors() fallback in case preflight is bypassed
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST']
+}));
+
 // ✅ Body parser
 app.use(bodyParser.json());
 
