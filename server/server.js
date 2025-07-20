@@ -8,7 +8,11 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// ✅ Allow only your frontend domain (GoDaddy)
+app.use(cors({
+  origin: 'https://sgdvendingllc.com'
+}));
+
 app.use(express.static(path.join(__dirname, '..')));
 app.use(bodyParser.json());
 

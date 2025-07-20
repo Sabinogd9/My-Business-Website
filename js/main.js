@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
   const form = document.querySelector('form');
   const responseMessage = document.createElement('p');
+  responseMessage.style.marginTop = '10px';
   form.appendChild(responseMessage);
 
   form.addEventListener('submit', async function (e) {
@@ -9,15 +10,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const name = form.querySelector('input[name="name"]').value.trim();
     const email = form.querySelector('input[name="email"]').value.trim();
     const message = form.querySelector('textarea[name="message"]').value.trim();
-    const company = form.querySelector('input[name="company"]').value.trim(); // Honeypot
+    const company = form.querySelector('input[name="company"]')?.value.trim() || ''; // Honeypot (hidden field)
 
-    // 🛡️ Honeypot check
+    // 🛡️ Spam honeypot check
     if (company !== '') {
-      console.warn('Spam bot detected (honeypot triggered).');
-      return; // Stop silently
+      console.warn('🛑 Spam bot detected (honeypot triggered).');
+      return;
     }
 
-    // ✅ Validation
+    // ✅ Simple validation
     if (!name || !email || !message) {
       responseMessage.textContent = 'Please fill in all fields.';
       responseMessage.style.color = 'red';
@@ -38,16 +39,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('https://my-business-website-1.onrender.com/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message, company }) // include company
+        body: JSON.stringify({ name, email, message, company })
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        responseMessage.textContent = `Thank you, ${name}! We'll be in touch soon.`;
+        responseMessage.textContent = `✅ Thank you, ${name}! We'll be in touch soon.`;
         responseMessage.style.color = 'green';
         form.reset();
       } else {
@@ -55,9 +56,9 @@ document.addEventListener('DOMContentLoaded', function () {
         responseMessage.style.color = 'red';
       }
 
-      console.log('Response:', result);
+      console.log('📨 Response from server:', result);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error('❌ Error submitting form:', error);
       responseMessage.textContent = 'Error sending message. Please try again.';
       responseMessage.style.color = 'red';
     }
