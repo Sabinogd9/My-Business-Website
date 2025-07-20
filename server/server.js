@@ -107,6 +107,21 @@ Date: ${newContact.date}
   });
 });
 
+// ✅ Handle CORS preflight for /api/contact
+app.options('/api/contact', (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    console.log('✅ OPTIONS preflight handled for /api/contact');
+    return res.sendStatus(204);
+  } else {
+    return res.status(403).send('CORS Forbidden');
+  }
+});
+
 // 🗂️ GET /api/contacts
 app.get('/api/contacts', (req, res) => {
   const filePath = path.join(__dirname, '../data/contacts.json');
