@@ -13,10 +13,11 @@ app.use(cors({
   origin: 'https://sgdvendingllc.com'
 }));
 
+// ✅ Serve static files (HTML/CSS/JS)
 app.use(express.static(path.join(__dirname, '..')));
 app.use(bodyParser.json());
 
-// ✅ Email transporter using Gmail + App Password + TLS for Render
+// ✅ Email transporter using Gmail App Password (stored in Render environment)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -24,18 +25,22 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false // Needed on Render sometimes
   }
 });
 
-// 📩 Handle contact form submission
+// 📩 POST /api/contact - handle form submission
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🛡️ Spam honeypot check
+  // 🛡️ Spam honeypot
   if (company && company.trim() !== '') {
-    console.log('🛑 Spam blocked.');
+    console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
+  }
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ message: 'Missing required fields' });
   }
 
   const newContact = {
@@ -45,17 +50,16 @@ app.post('/api/contact', (req, res) => {
     date: new Date().toISOString()
   };
 
-  console.log('📩 New contact:', newContact);
-
   const filePath = path.join(__dirname, '../data/contacts.json');
 
+  // 💾 Read + append contact to file
   fs.readFile(filePath, 'utf8', (err, data) => {
     let contacts = [];
     if (data) {
       try {
         contacts = JSON.parse(data);
       } catch (parseErr) {
-        console.error('⚠️ Failed to parse contacts:', parseErr);
+        console.error('⚠️ Failed to parse contacts.json:', parseErr);
       }
     }
 
@@ -67,6 +71,7 @@ app.post('/api/contact', (req, res) => {
         return res.status(500).json({ message: 'Error saving data' });
       }
 
+      // ✉️ Send email
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: process.env.EMAIL_USER,
@@ -74,7 +79,9 @@ app.post('/api/contact', (req, res) => {
         text: `
 Name: ${newContact.name}
 Email: ${newContact.email}
-Message: ${newContact.message}
+Message:
+${newContact.message}
+
 Date: ${newContact.date}
         `
       };
@@ -92,7 +99,7 @@ Date: ${newContact.date}
   });
 });
 
-// 🗂️ GET all contacts
+// 🗂️ GET /api/contacts - retrieve all contacts
 app.get('/api/contacts', (req, res) => {
   const filePath = path.join(__dirname, '../data/contacts.json');
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -105,18 +112,13 @@ app.get('/api/contacts', (req, res) => {
   });
 });
 
-// 🏠 Serve index.html on root path
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
-});
-
-// 🧪 Optional: test email endpoint for debugging
+// 🧪 GET /test-email - verify email is working
 app.get('/test-email', (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: process.env.EMAIL_USER,
     subject: 'Test Email',
-    text: 'This is a test email from your server.'
+    text: '✅ This is a test email from your Render backend.'
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -125,8 +127,13 @@ app.get('/test-email', (req, res) => {
       return res.status(500).send('Email test failed: ' + error.toString());
     }
     console.log('✅ Test email sent:', info.response);
-    res.send('Test email sent successfully!');
+    res.send('✅ Test email sent successfully!');
   });
+});
+
+// 🏠 Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
 });
 
 // 🚀 Start server
