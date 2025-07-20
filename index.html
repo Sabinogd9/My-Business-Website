@@ -5,6 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Business</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .hero-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 2rem;
+      padding: 2rem;
+    }
+
+    .hero-text {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .hero-image {
+      flex: 1;
+      min-width: 280px;
+      text-align: center;
+    }
+
+    .hero-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -18,10 +45,21 @@
   </header>
 
   <main>
-    <h2>We Are here to support your needs</h2>
-    <p>We place snack and drink vending machines at your location.</p>
-    <p>You call us. We install the vending machine. You take a piece of the profits.</p>
-    <p>Reliable convenience</p>
+    <div class="hero-container">
+      <!-- Left side: Text -->
+      <div class="hero-text">
+        <h2>We Are Here to Support Your Needs</h2>
+        <p>We place snack and drink vending machines at your location.</p>
+        <p>You call us. We install the vending machine. You take a piece of the profits.</p>
+        <p>Reliable convenience.</p>
+      </div>
+
+      <!-- Right side: Image -->
+      <div class="hero-image">
+        <img src="images/vending-machine.jpg" alt="Vending Machine" />
+        <p>Modern vending machines delivered to your location</p>
+      </div>
+    </div>
   </main>
 
   <footer>
@@ -30,4 +68,4 @@
 
   <script src="js/main.js"></script>
 </body>
-</html> 
+</html>
