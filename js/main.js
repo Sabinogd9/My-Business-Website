@@ -41,7 +41,10 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const res = await fetch('https://my-business-website-1.onrender.com/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ name, email, message, company })
       });
 
