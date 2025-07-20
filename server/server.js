@@ -8,19 +8,23 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS: Allow only specific origins with full preflight handling
+// ✅ CORS: Allow only specific origins
 const allowedOrigins = ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow server-side or curl requests
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true
-}));
+// ✅ Global CORS preflight handler (fixes 403 issues on Render)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // ✅ Body parser
 app.use(bodyParser.json());
@@ -105,21 +109,6 @@ Date: ${newContact.date}
       });
     });
   });
-});
-
-// ✅ Handle CORS preflight for /api/contact
-app.options('/api/contact', (req, res) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    console.log('✅ OPTIONS preflight handled for /api/contact');
-    return res.sendStatus(204);
-  } else {
-    return res.status(403).send('CORS Forbidden');
-  }
 });
 
 // 🗂️ GET /api/contacts
