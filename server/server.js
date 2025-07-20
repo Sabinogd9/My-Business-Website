@@ -8,16 +8,21 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ Allow only your frontend domain (GoDaddy)
+// ✅ CORS: Allow only your domain(s)
 app.use(cors({
-  origin: 'https://sgdvendingllc.com'
+  origin: ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
 }));
+
+// ✅ Handle CORS preflight manually (important for some setups)
+app.options('/api/contact', cors());
 
 // ✅ Serve static files (HTML/CSS/JS)
 app.use(express.static(path.join(__dirname, '..')));
 app.use(bodyParser.json());
 
-// ✅ Email transporter using Gmail App Password (stored in Render environment)
+// ✅ Email transporter using Gmail App Password (Render secrets)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -25,7 +30,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false // Needed on Render sometimes
+    rejectUnauthorized: false // Render workaround
   }
 });
 
@@ -33,7 +38,7 @@ const transporter = nodemailer.createTransport({
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🛡️ Spam honeypot
+  // 🛡️ Honeypot spam check
   if (company && company.trim() !== '') {
     console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -52,7 +57,6 @@ app.post('/api/contact', (req, res) => {
 
   const filePath = path.join(__dirname, '../data/contacts.json');
 
-  // 💾 Read + append contact to file
   fs.readFile(filePath, 'utf8', (err, data) => {
     let contacts = [];
     if (data) {
@@ -71,7 +75,6 @@ app.post('/api/contact', (req, res) => {
         return res.status(500).json({ message: 'Error saving data' });
       }
 
-      // ✉️ Send email
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: process.env.EMAIL_USER,
@@ -112,7 +115,7 @@ app.get('/api/contacts', (req, res) => {
   });
 });
 
-// 🧪 GET /test-email - verify email is working
+// 🧪 GET /test-email - verify email works
 app.get('/test-email', (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
