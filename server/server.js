@@ -15,14 +15,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type']
 }));
 
-// ✅ Handle CORS preflight manually (important for some setups)
+// ✅ Handle CORS preflight manually
 app.options('/api/contact', cors());
 
 // ✅ Serve static files (HTML/CSS/JS)
 app.use(express.static(path.join(__dirname, '..')));
 app.use(bodyParser.json());
 
-// ✅ Email transporter using Gmail App Password (Render secrets)
+// ✅ Email transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -30,7 +30,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false // Render workaround
+    rejectUnauthorized: false // Render TLS workaround
   }
 });
 
@@ -38,7 +38,7 @@ const transporter = nodemailer.createTransport({
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🛡️ Honeypot spam check
+  // Honeypot anti-spam check
   if (company && company.trim() !== '') {
     console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -139,7 +139,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 
-// 🚀 Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+// 🚀 Start server — ✅ MUST bind to 0.0.0.0 for Render
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
 });
