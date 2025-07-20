@@ -8,10 +8,10 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS configuration: Allow only these domains
+// ✅ Allowed origins
 const allowedOrigins = ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'];
 
-// ✅ Manual CORS headers (for preflight & strict environments like Render)
+// ✅ Manual CORS headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -28,34 +28,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Express CORS middleware as fallback
+// ✅ Express CORS fallback
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST']
 }));
 
-// ✅ Middleware
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '..'))); // Serve static files
 
-// ✅ Nodemailer setup
+// ✅ Serve public files
+app.use(express.static(path.join(__dirname, '..')));
+
+// ✅ Email setup
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  tls: {
-    rejectUnauthorized: false // Avoid TLS rejection in Render
-  }
+  tls: { rejectUnauthorized: false }
 });
 
-// 📩 POST /api/contact — receive and save messages
+// 📩 POST /api/contact
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
-  // 🧼 Honeypot spam protection
   if (company && company.trim() !== '') {
     console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -74,7 +72,6 @@ app.post('/api/contact', (req, res) => {
 
   const filePath = path.join(__dirname, '../data/contacts.json');
 
-  // Save to JSON
   fs.readFile(filePath, 'utf8', (err, data) => {
     let contacts = [];
     if (!err && data) {
@@ -93,7 +90,6 @@ app.post('/api/contact', (req, res) => {
         return res.status(500).json({ message: 'Error saving data' });
       }
 
-      // Send email
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: process.env.EMAIL_USER,
@@ -121,7 +117,7 @@ Date: ${newContact.date}
   });
 });
 
-// 🗂️ GET /api/contacts — retrieve saved messages
+// 🗂️ GET /api/contacts — returns list
 app.get('/api/contacts', (req, res) => {
   const filePath = path.join(__dirname, '../data/contacts.json');
 
@@ -132,7 +128,8 @@ app.get('/api/contacts', (req, res) => {
     }
 
     try {
-      const contacts = JSON.parse(data || '[]');
+      let contacts = JSON.parse(data || '[]');
+      contacts.sort((a, b) => new Date(b.date) - new Date(a.date));
       res.json(contacts);
     } catch (parseErr) {
       console.error('❌ Failed to parse contact data:', parseErr);
@@ -141,7 +138,29 @@ app.get('/api/contacts', (req, res) => {
   });
 });
 
-// 🧪 Test email endpoint
+// 🛡️ BASIC AUTH Middleware
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) {
+    res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
+    return res.status(401).send('Authentication required.');
+  }
+
+  const credentials = Buffer.from(auth.split(' ')[1], 'base64').toString().split(':');
+  const [user, pass] = credentials;
+
+  const validUser = process.env.ADMIN_USER;
+  const validPass = process.env.ADMIN_PASS;
+
+  if (user === validUser && pass === validPass) {
+    next();
+  } else {
+    res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
+    return res.status(401).send('Access denied.');
+  }
+}
+
+// 🧪 Test email
 app.get('/test-email', (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -161,7 +180,12 @@ app.get('/test-email', (req, res) => {
   });
 });
 
-// 🏠 Serve index.html on root
+// 🔒 Serve view-contacts.html with Basic Auth
+app.get('/view-contacts', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, '../view-contacts.html'));
+});
+
+// 🏠 Serve homepage
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
