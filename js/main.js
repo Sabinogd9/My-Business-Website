@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const name = form.querySelector('input[name="name"]').value.trim();
     const email = form.querySelector('input[name="email"]').value.trim();
     const message = form.querySelector('textarea[name="message"]').value.trim();
-    const company = form.querySelector('input[name="company"]')?.value.trim() || ''; // Honeypot (hidden field)
+    const company = form.querySelector('input[name="company"]')?.value.trim() || ''; // Honeypot
 
     // 🛡️ Spam honeypot check
     if (company !== '') {
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const res = await fetch('https://my-business-website-1.onrender.com/api/contact', {
+      const res = await fetch('https://sgdvendingllc.com/api/contact', {  // ✅ UPDATED URL
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

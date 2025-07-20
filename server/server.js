@@ -8,10 +8,10 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS: Allow only specific origins
+// ✅ CORS configuration: Allow only these domains
 const allowedOrigins = ['https://sgdvendingllc.com', 'https://www.sgdvendingllc.com'];
 
-// ✅ Global CORS preflight handler (fixes 403 issues on Render)
+// ✅ Manual CORS headers (for preflight & strict environments like Render)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -20,26 +20,26 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
+
   next();
 });
 
-// ✅ Also apply cors() fallback in case preflight is bypassed
+// ✅ Express CORS middleware as fallback
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST']
 }));
 
-// ✅ Body parser
+// ✅ Middleware
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, '..'))); // Serve static files
 
-// ✅ Serve static files
-app.use(express.static(path.join(__dirname, '..')));
-
-// ✅ Email transporter
+// ✅ Nodemailer setup
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -47,14 +47,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false // Render TLS workaround
+    rejectUnauthorized: false // Avoid TLS rejection in Render
   }
 });
 
-// 📩 POST /api/contact
+// 📩 POST /api/contact — receive and save messages
 app.post('/api/contact', (req, res) => {
   const { name, email, message, company } = req.body;
 
+  // 🧼 Honeypot spam protection
   if (company && company.trim() !== '') {
     console.log('🛑 Honeypot triggered — spam bot blocked.');
     return res.status(200).json({ message: 'Thank you!' });
@@ -73,9 +74,10 @@ app.post('/api/contact', (req, res) => {
 
   const filePath = path.join(__dirname, '../data/contacts.json');
 
+  // Save to JSON
   fs.readFile(filePath, 'utf8', (err, data) => {
     let contacts = [];
-    if (data) {
+    if (!err && data) {
       try {
         contacts = JSON.parse(data);
       } catch (parseErr) {
@@ -85,12 +87,13 @@ app.post('/api/contact', (req, res) => {
 
     contacts.push(newContact);
 
-    fs.writeFile(filePath, JSON.stringify(contacts, null, 2), err => {
-      if (err) {
-        console.error('❌ Failed to save contact:', err);
+    fs.writeFile(filePath, JSON.stringify(contacts, null, 2), writeErr => {
+      if (writeErr) {
+        console.error('❌ Failed to save contact:', writeErr);
         return res.status(500).json({ message: 'Error saving data' });
       }
 
+      // Send email
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: process.env.EMAIL_USER,
@@ -109,29 +112,36 @@ Date: ${newContact.date}
         if (error) {
           console.error('❌ Email sending failed:', error);
           return res.status(500).json({ message: 'Email failed', error: error.toString() });
-        } else {
-          console.log('✅ Email sent:', info.response);
-          return res.status(200).json({ message: 'Contact saved and email sent!' });
         }
+
+        console.log('✅ Email sent:', info.response);
+        return res.status(200).json({ message: 'Contact saved and email sent!' });
       });
     });
   });
 });
 
-// 🗂️ GET /api/contacts
+// 🗂️ GET /api/contacts — retrieve saved messages
 app.get('/api/contacts', (req, res) => {
   const filePath = path.join(__dirname, '../data/contacts.json');
+
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
       console.error('❌ Failed to read contacts:', err);
       return res.status(500).json({ message: 'Error reading contacts' });
     }
-    const contacts = JSON.parse(data || '[]');
-    res.json(contacts);
+
+    try {
+      const contacts = JSON.parse(data || '[]');
+      res.json(contacts);
+    } catch (parseErr) {
+      console.error('❌ Failed to parse contact data:', parseErr);
+      res.status(500).json({ message: 'Error parsing contacts' });
+    }
   });
 });
 
-// 🧪 GET /test-email
+// 🧪 Test email endpoint
 app.get('/test-email', (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -145,17 +155,18 @@ app.get('/test-email', (req, res) => {
       console.error('❌ Test email failed:', error);
       return res.status(500).send('Email test failed: ' + error.toString());
     }
+
     console.log('✅ Test email sent:', info.response);
     res.send('✅ Test email sent successfully!');
   });
 });
 
-// 🏠 Serve index.html
+// 🏠 Serve index.html on root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 
-// 🚀 Start server — bind to 0.0.0.0 for Render
+// 🚀 Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
 });
